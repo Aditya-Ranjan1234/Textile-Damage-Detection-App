@@ -146,7 +146,7 @@ def main():
         # Back button
         if st.button("← Back to samples"):
             st.session_state.selected_sample = None
-            st.experimental_rerun()
+            st.rerun()
         
         # Show loading message
         with st.spinner('Detecting damages... Please wait...'):
@@ -169,15 +169,49 @@ def main():
             # Draw annotations
             annotated_img = draw_annotations(img, annotation_path)
             
-            # Display images side by side
+            # Display images side by side with better formatting
             st.success("Analysis complete!")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.subheader("Original Image")
-                st.image(img, use_column_width=True)
-            with col2:
-                st.subheader("Detected Damages")
-                st.image(annotated_img, use_column_width=True)
+            st.markdown("""
+            <style>
+                .image-container {
+                    display: flex;
+                    justify-content: center;
+                    gap: 2rem;
+                    margin: 1rem 0;
+                }
+                .image-wrapper {
+                    text-align: center;
+                    flex: 1;
+                    max-width: 45%;
+                }
+                .image-wrapper img {
+                    max-width: 100%;
+                    height: auto;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                }
+                .image-wrapper h3 {
+                    margin: 0.5rem 0;
+                    color: #FFFFFF;
+                }
+            </style>
+            """, unsafe_allow_html=True)
+            
+            st.markdown(
+                f'''
+                <div class="image-container">
+                    <div class="image-wrapper">
+                        <h3>Original Image</h3>
+                        <img src="data:image/png;base64,{Image.fromarray(img).to_bytes(format='PNG').hex()}" />
+                    </div>
+                    <div class="image-wrapper">
+                        <h3>Detected Damages</h3>
+                        <img src="data:image/png;base64,{Image.fromarray(annotated_img).to_bytes(format='PNG').hex()}" />
+                    </div>
+                </div>
+                ''',
+                unsafe_allow_html=True
+            )
     else:
         # Show sample grid
         st.write("Click on any sample to view annotations")
@@ -187,12 +221,28 @@ def main():
         for i, img_path in enumerate(sample_images):
             with cols[i % 2]:
                 try:
-                    img = Image.open(img_path)
-                    # Make image clickable
-                    if st.button(f"Sample {i+1}", key=f"btn_{i}"):
-                        st.session_state.selected_sample = img_path
-                        st.experimental_rerun()
-                    st.image(img, width=300, caption=f"Sample {i+1}")
+                    try:
+                        img = Image.open(img_path)
+                        # Create a card-like container for each sample
+                        with st.container():
+                            # Make the entire container clickable
+                            if st.button(f"Sample {i+1}", key=f"btn_{i}"):
+                                st.session_state.selected_sample = img_path
+                                st.rerun()
+                            # Display image with consistent size and border
+                            st.markdown(
+                                f'''
+                                <div style="text-align: center; margin: 0.5rem 0;">
+                                    <img src="data:image/png;base64,{img.to_bytes(format='PNG').hex()}" 
+                                         style="width: 250px; height: 250px; object-fit: cover; border-radius: 8px; border: 1px solid #4A4F5B;" />
+                                    <p style="margin-top: 0.5rem; color: #E0E0E0;">Sample {i+1}</p>
+                                </div>
+                                ''',
+                                unsafe_allow_html=True
+                            )
+                    except Exception as e:
+                        st.error(f"Error loading image {img_path}: {e}")
+                        continue
                 except Exception as e:
                     st.error(f"Error loading image {img_path}: {e}")
 
