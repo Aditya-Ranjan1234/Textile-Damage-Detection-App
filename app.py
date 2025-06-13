@@ -54,27 +54,27 @@ def setup_sample_data():
         except Exception as e:
             print(f"Error processing {img_path}: {e}")
 
-# Define class names for textile defects with distinct colors
-# Based on the dataset's class IDs
+# Define class names based on the dataset's numeric IDs
+# Since the dataset uses numeric class IDs, we'll use them directly
 CLASS_NAMES = {
-    0: 'Hole',
-    1: 'Stain',
-    2: 'Tear',
-    3: 'Thread',
-    4: 'Knot',
-    5: 'Slub',
-    6: 'Contamination'
+    0: 'Defect Type 0',
+    1: 'Defect Type 1',
+    2: 'Defect Type 2',
+    3: 'Defect Type 3',
+    4: 'Defect Type 4',
+    5: 'Defect Type 5',
+    6: 'Defect Type 6'
 }
 
 # Different colors for different defect types
 DEFECT_COLORS = {
-    0: (255, 0, 0),      # Red for Hole
-    1: (0, 255, 0),      # Green for Stain
-    2: (0, 0, 255),      # Blue for Tear
-    3: (255, 255, 0),    # Cyan for Thread
-    4: (255, 0, 255),    # Magenta for Knot
-    5: (0, 255, 255),    # Yellow for Slub
-    6: (255, 128, 0)     # Orange for Contamination
+    0: (255, 0, 0),      # Red
+    1: (0, 255, 0),      # Green
+    2: (0, 0, 255),      # Blue
+    3: (255, 255, 0),    # Cyan
+    4: (255, 0, 255),    # Magenta
+    5: (0, 255, 255),    # Yellow
+    6: (255, 128, 0)     # Orange
 }
 
 def draw_annotations(image, annotation_path):
@@ -96,9 +96,9 @@ def draw_annotations(image, annotation_path):
                     # Get class ID as integer and class name
                     try:
                         class_id_int = int(class_id)
-                        class_name = CLASS_NAMES.get(class_id_int, f'Class {class_id}')
+                        class_name = CLASS_NAMES.get(class_id_int, f'Defect {class_id}')
                     except (ValueError, TypeError):
-                        class_name = f'Class {class_id}'  # Fallback if class_id is not an integer
+                        class_name = f'Defect {class_id}'  # Fallback if class_id is not an integer
                     
                     # Convert normalized to pixel coordinates
                     x_center *= w
