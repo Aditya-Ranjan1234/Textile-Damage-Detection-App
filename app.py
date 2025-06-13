@@ -1,7 +1,7 @@
 import streamlit as st
 import cv2
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image
 import os
 import shutil
 import glob
@@ -9,13 +9,6 @@ import glob
 # Configuration
 SAMPLE_IMAGES_DIR = "sample_images"
 ANNOTATIONS_DIR = "annotations"
-
-def load_sample_images():
-    """Load sample images from the sample_images directory"""
-    image_paths = glob.glob(os.path.join(SAMPLE_IMAGES_DIR, "*.jpg")) + \
-                 glob.glob(os.path.join(SAMPLE_IMAGES_DIR, "*.jpeg")) + \
-                 glob.glob(os.path.join(SAMPLE_IMAGES_DIR, "*.png"))
-    return image_paths[:10]  # Return first 10 images
 
 def setup_sample_data():
     """Copy sample images and annotations from the original dataset"""
@@ -32,22 +25,32 @@ def setup_sample_data():
     
     # Clear existing data
     for file in os.listdir(SAMPLE_IMAGES_DIR):
-        os.remove(os.path.join(SAMPLE_IMAGES_DIR, file))
+        try:
+            os.remove(os.path.join(SAMPLE_IMAGES_DIR, file))
+        except Exception as e:
+            print(f"Error removing {file}: {e}")
+    
     for file in os.listdir(ANNOTATIONS_DIR):
-        os.remove(os.path.join(ANNOTATIONS_DIR, file))
+        try:
+            os.remove(os.path.join(ANNOTATIONS_DIR, file))
+        except Exception as e:
+            print(f"Error removing {file}: {e}")
     
     # Copy images and annotations
     for i, img_path in enumerate(image_files, 1):
-        # Copy image
-        img_dst = os.path.join(SAMPLE_IMAGES_DIR, f"sample_{i}.jpg")
-        shutil.copy2(img_path, img_dst)
-        
-        # Copy annotation if exists
-        base_name = os.path.splitext(os.path.basename(img_path))[0]
-        label_src = os.path.join(source_label_dir, f"{base_name}.txt")
-        if os.path.exists(label_src):
-            label_dst = os.path.join(ANNOTATIONS_DIR, f"sample_{i}.txt")
-            shutil.copy2(label_src, label_dst)
+        try:
+            # Copy image
+            img_dst = os.path.join(SAMPLE_IMAGES_DIR, f"sample_{i}.jpg")
+            shutil.copy2(img_path, img_dst)
+            
+            # Copy annotation if exists
+            base_name = os.path.splitext(os.path.basename(img_path))[0]
+            label_src = os.path.join(source_label_dir, f"{base_name}.txt")
+            if os.path.exists(label_src):
+                label_dst = os.path.join(ANNOTATIONS_DIR, f"sample_{i}.txt")
+                shutil.copy2(label_src, label_dst)
+        except Exception as e:
+            print(f"Error processing {img_path}: {e}")
 
 def draw_annotations(image, annotation_path):
     """Draw annotations on the image"""
@@ -115,6 +118,10 @@ def main():
         
         # Show selected image with annotations
         img = cv2.imread(st.session_state.selected_sample)
+        if img is None:
+            st.error(f"Error loading image: {st.session_state.selected_sample}")
+            return
+            
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         
         # Get corresponding annotation
@@ -125,79 +132,30 @@ def main():
         annotated_img = draw_annotations(img, annotation_path)
         
         # Display images side by side
-        return
-    
-    # Show sample grid
-    st.write("Click on any sample to view annotations")
-    
-    # Display 2 columns of samples
-    cols = st.columns(2)
-    for i, img_path in enumerate(sample_images):
-        with cols[i % 2]:
-            img = Image.open(img_path)
-            # Make image clickable
-            if st.button(f"Sample {i+1}", key=f"btn_{i}"):
-                st.session_state.selected_sample = img_path
-                st.experimental_rerun()
-            st.image(img, use_column_width=True, caption=f"Sample {i+1}")
-
-if __name__ == "__main__":
-    main()
-                
-                # Store detections for display
-                st.session_state.detections = detections
-                st.session_state.output_image = output_image
-                    
-            except Exception as e:
-                st.error(f"Error during model inference: {str(e)}")
-                st.warning("Falling back to mock detections for demonstration.")
-                
-                # Fallback to mock detections
-                height, width = image_np.shape[:2]
-                mock_detections = [
-                    {"bbox": [width//4, height//4, width//2, height//2],
-                     "confidence": 0.87,
-                     "class": "tear"},
-                    {"bbox": [width//2, height//3, width//3, height//3],
-                     "confidence": 0.92,
-                     "class": "stain"}
-                ]
-                
-                # Store mock detections for display
-                st.session_state.detections = mock_detections
-                st.session_state.output_image = image_np.copy()
-                
-                # Draw mock detections
-                for det in mock_detections:
-                    if det["confidence"] >= confidence_threshold:
-                        x, y, w, h = det["bbox"]
-                        color = (0, 0, 255)
-                        cv2.rectangle(st.session_state.output_image, (x, y), (x+w, y+h), color, 2)
-                        label = f"{det['class']} {det['confidence']:.2f}"
-                        cv2.putText(st.session_state.output_image, label, (x, y-10), 
-                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-            
-            # Display result
-            with col2:
-                st.subheader("Detection Results")
-                if 'output_image' in st.session_state:
-                    st.image(st.session_state.output_image, use_column_width=True)
-                
-                # Show detection summary
-                st.subheader("Detection Summary")
-                if 'detections' in st.session_state and st.session_state.detections:
-                    for i, det in enumerate(st.session_state.detections, 1):
-                        if det["confidence"] >= confidence_threshold:
-                            st.write(f"{i}. {det['class'].capitalize()}: {det['confidence']:.2f} confidence")
-                else:
-                    st.warning("No detections to display")
-    
-    # Add some information about the app
-    st.sidebar.markdown("---")
-    st.sidebar.info(
-        "This is a prototype application for detecting damages in textile materials. "
-        "Upload an image of textile material to identify potential defects such as tears, stains, or holes."
-    )
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("Original Image")
+            st.image(img, use_column_width=True)
+        with col2:
+            st.subheader("With Annotations")
+            st.image(annotated_img, use_column_width=True)
+    else:
+        # Show sample grid
+        st.write("Click on any sample to view annotations")
+        
+        # Display 2 columns of samples
+        cols = st.columns(2)
+        for i, img_path in enumerate(sample_images):
+            with cols[i % 2]:
+                try:
+                    img = Image.open(img_path)
+                    # Make image clickable
+                    if st.button(f"Sample {i+1}", key=f"btn_{i}"):
+                        st.session_state.selected_sample = img_path
+                        st.experimental_rerun()
+                    st.image(img, use_column_width=True, caption=f"Sample {i+1}")
+                except Exception as e:
+                    st.error(f"Error loading image {img_path}: {e}")
 
 if __name__ == "__main__":
     main()
