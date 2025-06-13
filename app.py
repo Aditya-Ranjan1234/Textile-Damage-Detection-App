@@ -265,9 +265,11 @@ def main():
         <style>
             .responsive-grid {
                 display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-                gap: 1rem;
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 1.5rem;
                 padding: 1rem 0;
+                max-width: 1200px;
+                margin: 0 auto;
             }
             .sample-card {
                 background: #1E1E1E;
@@ -275,15 +277,27 @@ def main():
                 overflow: hidden;
                 border: 1px solid #4A4F5B;
                 transition: transform 0.2s, box-shadow 0.2s;
+                display: flex;
+                flex-direction: column;
             }
             .sample-card:hover {
                 transform: translateY(-5px);
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
             }
-            .sample-img {
+            .sample-img-container {
                 width: 100%;
-                height: 250px;
-                object-fit: cover;
+                padding-top: 100%; /* 1:1 Aspect Ratio */
+                position: relative;
+                overflow: hidden;
+            }
+            .sample-img {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                background: #2A2F3B;
             }
             .sample-title {
                 padding: 0.75rem;
@@ -323,7 +337,9 @@ def main():
                 st.markdown(
                     f'''
                     <div class="sample-card">
-                        <img class="sample-img" src="data:image/png;base64,{img_str}" />
+                        <div class="sample-img-container">
+                            <img class="sample-img" src="data:image/png;base64,{img_str}" alt="Sample {i+1}" />
+                        </div>
                         <div class="sample-title">Sample {i+1}</div>
                         <button class="sample-btn" onclick="window.location.href='?sample={i}'; return false;">View Analysis</button>
                     </div>
