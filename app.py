@@ -87,11 +87,24 @@ def draw_annotations(image, annotation_path):
     return img
 
 def main():
+    # Set page config and theme
     st.set_page_config(
         page_title="Textile Defect Viewer",
         page_icon="🔍",
         layout="wide"
     )
+    # Set dark theme
+    st.markdown("""
+    <style>
+        .stApp {
+            background-color: #0E1117;
+            color: #FAFAFA;
+        }
+        .stButton>button {
+            width: 100%;
+        }
+    </style>
+    """, unsafe_allow_html=True)
     
     # Setup sample data
     os.makedirs(SAMPLE_IMAGES_DIR, exist_ok=True)
@@ -160,7 +173,7 @@ def main():
                     if st.button(f"Sample {i+1}", key=f"btn_{i}"):
                         st.session_state.selected_sample = img_path
                         st.experimental_rerun()
-                    st.image(img, use_column_width=True, caption=f"Sample {i+1}")
+                    st.image(img, width=300, caption=f"Sample {i+1}")
                 except Exception as e:
                     st.error(f"Error loading image {img_path}: {e}")
 
