@@ -5,6 +5,8 @@ from PIL import Image
 import os
 import shutil
 import glob
+import base64
+from io import BytesIO
 
 # Configuration
 SAMPLE_IMAGES_DIR = "sample_images"
@@ -52,15 +54,27 @@ def setup_sample_data():
         except Exception as e:
             print(f"Error processing {img_path}: {e}")
 
-# Define class names for textile defects
+# Define class names for textile defects with distinct colors
+# Based on the dataset's class IDs
 CLASS_NAMES = {
-    '0': 'Hole',
-    '1': 'Stain',
-    '2': 'Tear',
-    '3': 'Thread',
-    '4': 'Knot',
-    '5': 'Slub',
-    '6': 'Contamination'
+    0: 'Hole',
+    1: 'Stain',
+    2: 'Tear',
+    3: 'Thread',
+    4: 'Knot',
+    5: 'Slub',
+    6: 'Contamination'
+}
+
+# Different colors for different defect types
+DEFECT_COLORS = {
+    0: (255, 0, 0),      # Red for Hole
+    1: (0, 255, 0),      # Green for Stain
+    2: (0, 0, 255),      # Blue for Tear
+    3: (255, 255, 0),    # Cyan for Thread
+    4: (255, 0, 255),    # Magenta for Knot
+    5: (0, 255, 255),    # Yellow for Slub
+    6: (255, 128, 0)     # Orange for Contamination
 }
 
 def draw_annotations(image, annotation_path):
@@ -79,8 +93,12 @@ def draw_annotations(image, annotation_path):
                     class_id, x_center, y_center, box_w, box_h = parts[:5]
                     x_center, y_center, box_w, box_h = map(float, [x_center, y_center, box_w, box_h])
                     
-                    # Get class name
-                    class_name = CLASS_NAMES.get(class_id, f'Class {class_id}')
+                    # Get class ID as integer and class name
+                    try:
+                        class_id_int = int(class_id)
+                        class_name = CLASS_NAMES.get(class_id_int, f'Class {class_id}')
+                    except (ValueError, TypeError):
+                        class_name = f'Class {class_id}'  # Fallback if class_id is not an integer
                     
                     # Convert normalized to pixel coordinates
                     x_center *= w
@@ -94,18 +112,40 @@ def draw_annotations(image, annotation_path):
                     x2 = int(x_center + box_w / 2)
                     y2 = int(y_center + box_h / 2)
                     
-                    # Draw rectangle
-                    color = (0, 255, 0)  # Green
-                    cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
+                    # Get color for this defect type
+                    try:
+                        class_id_int = int(class_id)
+                        color = DEFECT_COLORS.get(class_id_int, (0, 255, 0))  # Default to green if class_id is invalid
+                    except (ValueError, TypeError):
+                        color = (0, 255, 0)  # Default to green if class_id is not an integer
+                    
+                    # Draw rectangle with thicker border
+                    cv2.rectangle(img, (x1, y1), (x2, y2), color, 3)
+                    
+                    # Prepare label text
+                    label = f"{class_name}"
+                    
+                    # Calculate text size and position
+                    font_scale = 0.8
+                    font_thickness = 2
+                    (label_w, label_h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thickness)
                     
                     # Draw label background
-                    label = f"Defect: {class_name}"
-                    (label_w, label_h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
-                    cv2.rectangle(img, (x1, y1 - 25), (x1 + label_w + 5, y1), color, -1)
+                    cv2.rectangle(img, 
+                                (x1, y1 - label_h - 10), 
+                                (x1 + label_w + 10, y1), 
+                                color, 
+                                -1)  # Filled rectangle
                     
                     # Draw label text
-                    cv2.putText(img, label, (x1 + 2, y1 - 8), 
-                              cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+                    cv2.putText(img, 
+                              label, 
+                              (x1 + 5, y1 - 5), 
+                              cv2.FONT_HERSHEY_SIMPLEX, 
+                              font_scale, 
+                              (0, 0, 0),  # Black text
+                              font_thickness, 
+                              cv2.LINE_AA)
     except Exception as e:
         print(f"Error drawing annotations: {e}")
     
@@ -222,18 +262,16 @@ def main():
             </style>
             """, unsafe_allow_html=True)
             
-            # Convert images to base64
-            import base64
-            from io import BytesIO
-            
             def pil_to_base64(image):
                 buffered = BytesIO()
+                if isinstance(image, np.ndarray):
+                    image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
                 image.save(buffered, format="PNG")
                 return base64.b64encode(buffered.getvalue()).decode()
             
-            # Convert images to PIL format if they're numpy arrays
-            img_pil = Image.fromarray(img) if isinstance(img, np.ndarray) else img
-            annotated_img_pil = Image.fromarray(annotated_img) if isinstance(annotated_img, np.ndarray) else annotated_img
+            # Convert images to proper format
+            img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+            annotated_img_pil = Image.fromarray(cv2.cvtColor(annotated_img, cv2.COLOR_BGR2RGB))
             
             st.markdown(
                 f'''
@@ -269,6 +307,8 @@ def main():
                                 st.rerun()
                             # Convert image to base64
                             buffered = BytesIO()
+                            if isinstance(img, np.ndarray):
+                                img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
                             img.save(buffered, format="PNG")
                             img_str = base64.b64encode(buffered.getvalue()).decode()
                             
