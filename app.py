@@ -93,15 +93,34 @@ def main():
         page_icon="🔍",
         layout="wide"
     )
-    # Set dark theme
+    # Set dark theme and UI improvements
     st.markdown("""
     <style>
         .stApp {
             background-color: #0E1117;
-            color: #FAFAFA;
+            color: #E0E0E0;
         }
         .stButton>button {
-            width: 100%;
+            width: 80%;
+            margin: 0 auto;
+            display: block;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            background-color: #2A2F3B;
+            color: #E0E0E0;
+            border: 1px solid #4A4F5B;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .stButton>button:hover {
+            background-color: #3A3F4B;
+            border-color: #5A5F6B;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            color: #FFFFFF;
+        }
+        .stMarkdown p, .stMarkdown div, .stMarkdown span {
+            color: #E0E0E0 !important;
         }
     </style>
     """, unsafe_allow_html=True)
