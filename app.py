@@ -116,29 +116,36 @@ def main():
             st.session_state.selected_sample = None
             st.experimental_rerun()
         
-        # Show selected image with annotations
-        img = cv2.imread(st.session_state.selected_sample)
-        if img is None:
-            st.error(f"Error loading image: {st.session_state.selected_sample}")
-            return
+        # Show loading message
+        with st.spinner('Detecting damages... Please wait...'):
+            # Simulate processing time (2 seconds)
+            import time
+            time.sleep(2)
             
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        
-        # Get corresponding annotation
-        base_name = os.path.splitext(os.path.basename(st.session_state.selected_sample))[0]
-        annotation_path = os.path.join(ANNOTATIONS_DIR, f"{base_name}.txt")
-        
-        # Draw annotations
-        annotated_img = draw_annotations(img, annotation_path)
-        
-        # Display images side by side
-        col1, col2 = st.columns(2)
-        with col1:
-            st.subheader("Original Image")
-            st.image(img, use_column_width=True)
-        with col2:
-            st.subheader("With Annotations")
-            st.image(annotated_img, use_column_width=True)
+            # Load and process the image
+            img = cv2.imread(st.session_state.selected_sample)
+            if img is None:
+                st.error(f"Error loading image: {st.session_state.selected_sample}")
+                return
+                
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            
+            # Get corresponding annotation
+            base_name = os.path.splitext(os.path.basename(st.session_state.selected_sample))[0]
+            annotation_path = os.path.join(ANNOTATIONS_DIR, f"{base_name}.txt")
+            
+            # Draw annotations
+            annotated_img = draw_annotations(img, annotation_path)
+            
+            # Display images side by side
+            st.success("Analysis complete!")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.subheader("Original Image")
+                st.image(img, use_column_width=True)
+            with col2:
+                st.subheader("Detected Damages")
+                st.image(annotated_img, use_column_width=True)
     else:
         # Show sample grid
         st.write("Click on any sample to view annotations")
