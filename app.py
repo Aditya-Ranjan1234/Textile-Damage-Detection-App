@@ -265,10 +265,10 @@ def main():
         <style>
             .responsive-grid {
                 display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-                gap: 1.5rem;
-                padding: 1rem 0;
-                max-width: 1200px;
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 1rem;
+                padding: 0.5rem;
+                max-width: 800px;
                 margin: 0 auto;
             }
             .sample-card {
@@ -286,18 +286,18 @@ def main():
             }
             .sample-img-container {
                 width: 100%;
-                padding-top: 100%; /* 1:1 Aspect Ratio */
+                height: 150px;
                 position: relative;
                 overflow: hidden;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: #2A2F3B;
             }
             .sample-img {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
+                max-width: 100%;
+                max-height: 100%;
                 object-fit: contain;
-                background: #2A2F3B;
             }
             .sample-title {
                 padding: 0.75rem;
