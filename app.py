@@ -78,7 +78,7 @@ DEFECT_COLORS = {
 }
 
 def draw_annotations(image, annotation_path):
-    """Draw bounding boxes on the image without labels"""
+    """Draw annotations and labels on the image"""
     img = image.copy()
     h, w = img.shape[:2]
     
@@ -92,6 +92,13 @@ def draw_annotations(image, annotation_path):
                 if len(parts) >= 5:  # class_id, x_center, y_center, width, height
                     class_id, x_center, y_center, box_w, box_h = parts[:5]
                     x_center, y_center, box_w, box_h = map(float, [x_center, y_center, box_w, box_h])
+                    
+                    # Get class ID as integer and class name
+                    try:
+                        class_id_int = int(class_id)
+                        class_name = CLASS_NAMES.get(class_id_int, f'Defect {class_id}')
+                    except (ValueError, TypeError):
+                        class_name = f'Defect {class_id}'  # Fallback if class_id is not an integer
                     
                     # Convert normalized to pixel coordinates
                     x_center *= w
@@ -112,8 +119,33 @@ def draw_annotations(image, annotation_path):
                     except (ValueError, TypeError):
                         color = (0, 255, 0)  # Default to green if class_id is not an integer
                     
-                    # Draw rectangle with thicker border (no label)
+                    # Draw rectangle with thicker border
                     cv2.rectangle(img, (x1, y1), (x2, y2), color, 3)
+                    
+                    # Prepare label text
+                    label = f"{class_name}"
+                    
+                    # Calculate text size and position
+                    font_scale = 0.8
+                    font_thickness = 2
+                    (label_w, label_h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thickness)
+                    
+                    # Draw label background
+                    cv2.rectangle(img, 
+                                (x1, y1 - label_h - 10), 
+                                (x1 + label_w + 10, y1), 
+                                color, 
+                                -1)  # Filled rectangle
+                    
+                    # Draw label text
+                    cv2.putText(img, 
+                              label, 
+                              (x1 + 5, y1 - 5), 
+                              cv2.FONT_HERSHEY_SIMPLEX, 
+                              font_scale, 
+                              (0, 0, 0),  # Black text
+                              font_thickness, 
+                              cv2.LINE_AA)
     except Exception as e:
         print(f"Error drawing annotations: {e}")
     
@@ -260,110 +292,42 @@ def main():
         # Show sample grid
         st.write("Click on any sample to analyze for textile defects")
         
-        # Create a responsive grid for the samples
-        st.markdown("""
-        <style>
-            .responsive-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-                gap: 1rem;
-                padding: 0.5rem;
-                max-width: 800px;
-                margin: 0 auto;
-            }
-            .sample-card {
-                background: #1E1E1E;
-                border-radius: 8px;
-                overflow: hidden;
-                border: 1px solid #4A4F5B;
-                transition: transform 0.2s, box-shadow 0.2s;
-                display: flex;
-                flex-direction: column;
-            }
-            .sample-card:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            }
-            .sample-img-container {
-                width: 100%;
-                height: 150px;
-                position: relative;
-                overflow: hidden;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: #2A2F3B;
-            }
-            .sample-img {
-                max-width: 100%;
-                max-height: 100%;
-                object-fit: contain;
-            }
-            .sample-title {
-                padding: 0.75rem;
-                text-align: center;
-                color: #E0E0E0;
-                font-weight: 500;
-            }
-            .sample-btn {
-                width: 100%;
-                padding: 0.5rem;
-                background: #2A2F3B;
-                color: #E0E0E0;
-                border: none;
-                cursor: pointer;
-                transition: background 0.2s;
-            }
-            .sample-btn:hover {
-                background: #3A3F4B;
-            }
-        </style>
-        """, unsafe_allow_html=True)
-
-        # Display samples in a responsive grid
-        st.markdown('<div class="responsive-grid">', unsafe_allow_html=True)
-        
+        # Display 2 columns of samples
+        cols = st.columns(2)
         for i, img_path in enumerate(sample_images):
-            try:
-                img = Image.open(img_path)
-                # Convert image to base64
-                buffered = BytesIO()
-                if isinstance(img, np.ndarray):
-                    img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-                img.save(buffered, format="PNG")
-                img_str = base64.b64encode(buffered.getvalue()).decode()
-                
-                # Create a card for each sample
-                st.markdown(
-                    f'''
-                    <div class="sample-card">
-                        <div class="sample-img-container">
-                            <img class="sample-img" src="data:image/png;base64,{img_str}" alt="Sample {i+1}" />
-                        </div>
-                        <div class="sample-title">Sample {i+1}</div>
-                        <button class="sample-btn" onclick="window.location.href='?sample={i}'; return false;">View Analysis</button>
-                    </div>
-                    ''',
-                    unsafe_allow_html=True
-                )
-                
-                # Store the mapping of sample index to path
-                if 'sample_paths' not in st.session_state:
-                    st.session_state.sample_paths = {}
-                st.session_state.sample_paths[str(i)] = img_path
-                
-            except Exception as e:
-                st.error(f"Error loading image {img_path}: {e}")
-                continue
-                
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        # Handle sample selection from URL parameter
-        if 'sample' in st.query_params:
-            sample_idx = st.query_params['sample']
-            if 'sample_paths' in st.session_state and sample_idx in st.session_state.sample_paths:
-                st.session_state.selected_sample = st.session_state.sample_paths[sample_idx]
-                st.rerun()
+            with cols[i % 2]:
+                try:
+                    try:
+                        img = Image.open(img_path)
+                        # Create a card-like container for each sample
+                        with st.container():
+                            # Make the entire container clickable
+                            if st.button(f"Sample {i+1}", key=f"btn_{i}"):
+                                st.session_state.selected_sample = img_path
+                                st.rerun()
+                            # Convert image to base64
+                            buffered = BytesIO()
+                            if isinstance(img, np.ndarray):
+                                img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+                            img.save(buffered, format="PNG")
+                            img_str = base64.b64encode(buffered.getvalue()).decode()
+                            
+                            # Display image with consistent size and border
+                            st.markdown(
+                                f'''
+                                <div style="text-align: center; margin: 0.5rem 0;">
+                                    <img src="data:image/png;base64,{img_str}" 
+                                         style="width: 250px; height: 250px; object-fit: cover; border-radius: 8px; border: 1px solid #4A4F5B;" />
+                                    <p style="margin-top: 0.5rem; color: #E0E0E0;">Sample {i+1}</p>
+                                </div>
+                                ''',
+                                unsafe_allow_html=True
+                            )
+                    except Exception as e:
+                        st.error(f"Error loading image {img_path}: {e}")
+                        continue
+                except Exception as e:
+                    st.error(f"Error loading image {img_path}: {e}")
 
 if __name__ == "__main__":
     main()
