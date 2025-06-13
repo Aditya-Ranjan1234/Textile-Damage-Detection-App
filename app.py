@@ -78,7 +78,7 @@ DEFECT_COLORS = {
 }
 
 def draw_annotations(image, annotation_path):
-    """Draw annotations and labels on the image"""
+    """Draw bounding boxes on the image without text labels"""
     img = image.copy()
     h, w = img.shape[:2]
     
@@ -92,13 +92,6 @@ def draw_annotations(image, annotation_path):
                 if len(parts) >= 5:  # class_id, x_center, y_center, width, height
                     class_id, x_center, y_center, box_w, box_h = parts[:5]
                     x_center, y_center, box_w, box_h = map(float, [x_center, y_center, box_w, box_h])
-                    
-                    # Get class ID as integer and class name
-                    try:
-                        class_id_int = int(class_id)
-                        class_name = CLASS_NAMES.get(class_id_int, f'Defect {class_id}')
-                    except (ValueError, TypeError):
-                        class_name = f'Defect {class_id}'  # Fallback if class_id is not an integer
                     
                     # Convert normalized to pixel coordinates
                     x_center *= w
@@ -119,33 +112,8 @@ def draw_annotations(image, annotation_path):
                     except (ValueError, TypeError):
                         color = (0, 255, 0)  # Default to green if class_id is not an integer
                     
-                    # Draw rectangle with thicker border
+                    # Draw rectangle with thicker border (no text)
                     cv2.rectangle(img, (x1, y1), (x2, y2), color, 3)
-                    
-                    # Prepare label text
-                    label = f"{class_name}"
-                    
-                    # Calculate text size and position
-                    font_scale = 0.8
-                    font_thickness = 2
-                    (label_w, label_h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thickness)
-                    
-                    # Draw label background
-                    cv2.rectangle(img, 
-                                (x1, y1 - label_h - 10), 
-                                (x1 + label_w + 10, y1), 
-                                color, 
-                                -1)  # Filled rectangle
-                    
-                    # Draw label text
-                    cv2.putText(img, 
-                              label, 
-                              (x1 + 5, y1 - 5), 
-                              cv2.FONT_HERSHEY_SIMPLEX, 
-                              font_scale, 
-                              (0, 0, 0),  # Black text
-                              font_thickness, 
-                              cv2.LINE_AA)
     except Exception as e:
         print(f"Error drawing annotations: {e}")
     
@@ -281,7 +249,7 @@ def main():
                         <img src="data:image/png;base64,{pil_to_base64(img_pil)}" />
                     </div>
                     <div class="image-wrapper">
-                        <h3>Detected Defects</h3>
+                        <h3>Defect Detection Results</h3>
                         <img src="data:image/png;base64,{pil_to_base64(annotated_img_pil)}" />
                     </div>
                 </div>
