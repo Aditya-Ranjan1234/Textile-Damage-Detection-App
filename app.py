@@ -52,8 +52,19 @@ def setup_sample_data():
         except Exception as e:
             print(f"Error processing {img_path}: {e}")
 
+# Define class names for textile defects
+CLASS_NAMES = {
+    '0': 'Hole',
+    '1': 'Stain',
+    '2': 'Tear',
+    '3': 'Thread',
+    '4': 'Knot',
+    '5': 'Slub',
+    '6': 'Contamination'
+}
+
 def draw_annotations(image, annotation_path):
-    """Draw annotations on the image"""
+    """Draw annotations and labels on the image"""
     img = image.copy()
     h, w = img.shape[:2]
     
@@ -65,7 +76,11 @@ def draw_annotations(image, annotation_path):
             for line in f:
                 parts = line.strip().split()
                 if len(parts) >= 5:  # class_id, x_center, y_center, width, height
-                    _, x_center, y_center, box_w, box_h = map(float, parts[:5])
+                    class_id, x_center, y_center, box_w, box_h = parts[:5]
+                    x_center, y_center, box_w, box_h = map(float, [x_center, y_center, box_w, box_h])
+                    
+                    # Get class name
+                    class_name = CLASS_NAMES.get(class_id, f'Class {class_id}')
                     
                     # Convert normalized to pixel coordinates
                     x_center *= w
@@ -80,7 +95,17 @@ def draw_annotations(image, annotation_path):
                     y2 = int(y_center + box_h / 2)
                     
                     # Draw rectangle
-                    cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    color = (0, 255, 0)  # Green
+                    cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
+                    
+                    # Draw label background
+                    label = f"Defect: {class_name}"
+                    (label_w, label_h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
+                    cv2.rectangle(img, (x1, y1 - 25), (x1 + label_w + 5, y1), color, -1)
+                    
+                    # Draw label text
+                    cv2.putText(img, label, (x1 + 2, y1 - 8), 
+                              cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
     except Exception as e:
         print(f"Error drawing annotations: {e}")
     
@@ -89,7 +114,7 @@ def draw_annotations(image, annotation_path):
 def main():
     # Set page config and theme
     st.set_page_config(
-        page_title="Textile Defect Viewer",
+        page_title="Textile Defect Detector",
         page_icon="🔍",
         layout="wide"
     )
@@ -137,7 +162,7 @@ def main():
     if 'selected_sample' not in st.session_state:
         st.session_state.selected_sample = None
     
-    st.title("🔍 Textile Defect Viewer")
+    st.title("🔍 Textile Defect Detector")
     
     # Get sample images
     sample_images = sorted(glob.glob(os.path.join(SAMPLE_IMAGES_DIR, "*.jpg")))
@@ -149,10 +174,10 @@ def main():
             st.rerun()
         
         # Show loading message
-        with st.spinner('Detecting damages... Please wait...'):
-            # Simulate processing time (2 seconds)
+        with st.spinner('Analyzing fabric for defects... Please wait...'):
+            # Simulate processing time (1 second)
             import time
-            time.sleep(2)
+            time.sleep(1)
             
             # Load and process the image
             img = cv2.imread(st.session_state.selected_sample)
@@ -170,7 +195,7 @@ def main():
             annotated_img = draw_annotations(img, annotation_path)
             
             # Display images side by side with better formatting
-            st.success("Analysis complete!")
+            st.success("Defect analysis complete!")
             st.markdown("""
             <style>
                 .image-container {
@@ -197,16 +222,29 @@ def main():
             </style>
             """, unsafe_allow_html=True)
             
+            # Convert images to base64
+            import base64
+            from io import BytesIO
+            
+            def pil_to_base64(image):
+                buffered = BytesIO()
+                image.save(buffered, format="PNG")
+                return base64.b64encode(buffered.getvalue()).decode()
+            
+            # Convert images to PIL format if they're numpy arrays
+            img_pil = Image.fromarray(img) if isinstance(img, np.ndarray) else img
+            annotated_img_pil = Image.fromarray(annotated_img) if isinstance(annotated_img, np.ndarray) else annotated_img
+            
             st.markdown(
                 f'''
                 <div class="image-container">
                     <div class="image-wrapper">
                         <h3>Original Image</h3>
-                        <img src="data:image/png;base64,{Image.fromarray(img).to_bytes(format='PNG').hex()}" />
+                        <img src="data:image/png;base64,{pil_to_base64(img_pil)}" />
                     </div>
                     <div class="image-wrapper">
-                        <h3>Detected Damages</h3>
-                        <img src="data:image/png;base64,{Image.fromarray(annotated_img).to_bytes(format='PNG').hex()}" />
+                        <h3>Detected Defects</h3>
+                        <img src="data:image/png;base64,{pil_to_base64(annotated_img_pil)}" />
                     </div>
                 </div>
                 ''',
@@ -214,7 +252,7 @@ def main():
             )
     else:
         # Show sample grid
-        st.write("Click on any sample to view annotations")
+        st.write("Click on any sample to analyze for textile defects")
         
         # Display 2 columns of samples
         cols = st.columns(2)
@@ -229,11 +267,16 @@ def main():
                             if st.button(f"Sample {i+1}", key=f"btn_{i}"):
                                 st.session_state.selected_sample = img_path
                                 st.rerun()
+                            # Convert image to base64
+                            buffered = BytesIO()
+                            img.save(buffered, format="PNG")
+                            img_str = base64.b64encode(buffered.getvalue()).decode()
+                            
                             # Display image with consistent size and border
                             st.markdown(
                                 f'''
                                 <div style="text-align: center; margin: 0.5rem 0;">
-                                    <img src="data:image/png;base64,{img.to_bytes(format='PNG').hex()}" 
+                                    <img src="data:image/png;base64,{img_str}" 
                                          style="width: 250px; height: 250px; object-fit: cover; border-radius: 8px; border: 1px solid #4A4F5B;" />
                                     <p style="margin-top: 0.5rem; color: #E0E0E0;">Sample {i+1}</p>
                                 </div>
