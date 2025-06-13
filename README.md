@@ -1,14 +1,15 @@
 # Textile Damage Detection App
 
-A Streamlit-based web application for detecting damages and defects in textile materials using computer vision.
+A Streamlit-based web application for detecting damages and defects in textile materials using computer vision and YOLOv8.
 
 ## Features
 
-- Upload and analyze textile images for defects
+- Browse through 10 sample textile defect images
+- Click on any image to view detailed detections
 - Adjustable confidence threshold for detections
-- Visual display of detected damages
+- Visual display of detected damages with bounding boxes
 - Real-time results with detailed detection information
-- User-friendly interface
+- Simple and intuitive user interface
 
 ## Installation
 
